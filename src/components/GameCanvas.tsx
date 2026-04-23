@@ -193,22 +193,9 @@ export default function GameCanvas() {
           armor: { r: 100, g: 150, b: 255 },
           scroll: { r: 255, g: 255, b: 150 },
         };
-        const bobY = Math.sin(renderer.time * 2 + screenCol + screenRow) * 2;
-        const glowAlpha = 0.15 + Math.sin(renderer.time * 3 + screenCol * 2) * 0.1;
-
-        const ix = screenCol * TILE_SIZE + TILE_SIZE / 2;
-        const iy = screenRow * TILE_SIZE + TILE_SIZE / 2 + bobY;
         const c = itemColor[item.type] || { r: 255, g: 255, b: 255 };
-        const gradient = renderer["ctx"].createRadialGradient(ix, iy, 0, ix, iy, TILE_SIZE * 0.6);
-        gradient.addColorStop(0, `rgba(${c.r},${c.g},${c.b},${glowAlpha})`);
-        gradient.addColorStop(1, `rgba(${c.r},${c.g},${c.b},0)`);
-        renderer["ctx"].fillStyle = gradient;
-        renderer["ctx"].fillRect(
-          screenCol * TILE_SIZE,
-          screenRow * TILE_SIZE,
-          TILE_SIZE,
-          TILE_SIZE
-        );
+        const bobY = Math.sin(renderer.time * 2 + screenCol + screenRow) * 2;
+        renderer.drawItemGlow(screenCol, screenRow, c, bobY);
 
         renderer.drawTile(
           screenCol,

@@ -50,7 +50,7 @@ export class Renderer {
   }
 
   shake(intensity: number) {
-    this.shakeDecay = Math.max(this.shakeDecay, intensity);
+    this.shakeDecay = Math.min(2, Math.max(this.shakeDecay, intensity));
   }
 
   clear() {
@@ -216,7 +216,7 @@ export class Renderer {
   ) {
     const x = col * this.tileSize;
     const bobOffset = Math.sin(this.time * 2 + col * 3 + row * 5) * 1.5;
-    const y = col * 0 + row * this.tileSize + bobOffset;
+    const y = row * this.tileSize + bobOffset;
     const pixSize = this.tileSize / sprite.length;
 
     for (let sy = 0; sy < sprite.length; sy++) {
@@ -497,6 +497,24 @@ export class Renderer {
       oy + playerY * pixelSize - 1,
       pixelSize + 2,
       pixelSize + 2
+    );
+  }
+
+  drawItemGlow(col: number, row: number, color: Color, bobY: number) {
+    const cx = col * this.tileSize + this.tileSize / 2;
+    const cy = row * this.tileSize + this.tileSize / 2 + bobY;
+    const glowAlpha = 0.15 + Math.sin(this.time * 3 + col * 2) * 0.1;
+    const radius = this.tileSize * 0.6;
+
+    const gradient = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+    gradient.addColorStop(0, `rgba(${color.r},${color.g},${color.b},${glowAlpha})`);
+    gradient.addColorStop(1, `rgba(${color.r},${color.g},${color.b},0)`);
+    this.ctx.fillStyle = gradient;
+    this.ctx.fillRect(
+      col * this.tileSize,
+      row * this.tileSize,
+      this.tileSize,
+      this.tileSize
     );
   }
 
