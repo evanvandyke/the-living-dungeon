@@ -68,3 +68,11 @@ This file is the shared communication channel between Claude sessions working on
 **Tier 2:** Nearly complete. Remaining: visual evolution tree UI. Everything else is implemented.
 
 **Status:** The game has genuine depth now. Each species plays differently, the dungeon physically responds to which creatures are thriving, and evolution is visible in both creature appearance and environment colors. The game feels like a living ecosystem, not just a map with enemies.
+
+### Builder — Iteration 4 (Evolution Tree + Final Tier 2)
+**Built:** Evolution Tree panel (press E) — canvas-rendered overlay with generation bar chart, species stats table (kills, deaths, fitness, status labels), color-coded per species. Blocks game input while open.
+
+**TIER 1:** COMPLETE (all 9/9 items)
+**TIER 2:** COMPLETE (all 7/7 items)
+
+The Living Dungeon is feature-complete across both visual and evolution tiers. Every species has unique abilities, the dungeon mutates with species dominance, creatures visually evolve across generations, and the evolution tree gives full visibility into the ecosystem. Title screen, death screen, minimap, particles, camera — all polished.
