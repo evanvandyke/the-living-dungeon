@@ -31,6 +31,7 @@ export default function GameCanvas() {
   const [evolutionEvents, setEvolutionEvents] = useState<string[]>([]);
   const [showDeathScreen, setShowDeathScreen] = useState(false);
   const [speciesStats, setSpeciesStats] = useState<Map<string, { totalKills: number; totalDeaths: number; currentGeneration: number }>>(new Map());
+  const [speciesPopulation, setSpeciesPopulation] = useState<{ species: string; count: number; gen: number }[]>([]);
 
   const updateUI = useCallback(() => {
     if (!gameRef.current) return;
@@ -52,6 +53,24 @@ export default function GameCanvas() {
       setShowDeathScreen(true);
       setSpeciesStats(gameRef.current.getSpeciesStats());
     }
+
+    const popMap = new Map<string, { count: number; gen: number }>();
+    for (const m of s.monsters) {
+      if (!m.alive) continue;
+      const existing = popMap.get(m.species);
+      if (existing) {
+        existing.count++;
+        existing.gen = Math.max(existing.gen, m.genome.generation);
+      } else {
+        popMap.set(m.species, { count: 1, gen: m.genome.generation });
+      }
+    }
+    setSpeciesPopulation(
+      Array.from(popMap.entries())
+        .map(([species, data]) => ({ species, ...data }))
+        .sort((a, b) => b.count - a.count)
+    );
+
     setEvolutionEvents(
       s.evolutionLog.slice(-5).map((e) => `[T${e.turn}] ${e.description}`)
     );
@@ -437,6 +456,25 @@ export default function GameCanvas() {
             <span className="text-red-300">{stats.kills}</span>
           </div>
         </div>
+
+        {speciesPopulation.length > 0 && (
+          <div className="bg-[#141422] rounded p-3">
+            <h3 className="text-xs font-bold text-gray-500 uppercase mb-2">
+              Species on this Level
+            </h3>
+            <div className="space-y-1 text-xs">
+              {speciesPopulation.map((sp) => (
+                <div key={sp.species} className="flex justify-between items-center">
+                  <span className="text-gray-300 capitalize">{sp.species}</span>
+                  <span className="text-gray-500">
+                    <span className="text-gray-400">{sp.count}</span>
+                    <span className="text-purple-400/60 ml-2">gen {sp.gen}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="bg-[#141422] rounded p-3 flex-1 min-h-0">
           <h3 className="text-xs font-bold text-gray-500 uppercase mb-2">
