@@ -5,6 +5,7 @@ import { Renderer, Color } from "../engine/renderer";
 import { GameLoop } from "../game/gameLoop";
 import { TileType } from "../game/generation/dungeon";
 import DeathScreen from "./DeathScreen";
+import EvolutionPanel from "./EvolutionPanel";
 
 const TILE_SIZE = 24;
 
@@ -33,6 +34,7 @@ export default function GameCanvas() {
   const [showDeathScreen, setShowDeathScreen] = useState(false);
   const [speciesStats, setSpeciesStats] = useState<Map<string, { totalKills: number; totalDeaths: number; currentGeneration: number }>>(new Map());
   const [speciesPopulation, setSpeciesPopulation] = useState<{ species: string; count: number; gen: number }[]>([]);
+  const [showEvolution, setShowEvolution] = useState(false);
 
   const updateUI = useCallback(() => {
     if (!gameRef.current) return;
@@ -394,6 +396,17 @@ export default function GameCanvas() {
         return;
       }
 
+      if (e.key === "e" || e.key === "E") {
+        setShowEvolution((prev) => !prev);
+        if (!showEvolution) {
+          setSpeciesStats(game.getSpeciesStats());
+        }
+        e.preventDefault();
+        return;
+      }
+
+      if (showEvolution) return;
+
       let moved = false;
 
       switch (e.key) {
@@ -441,7 +454,7 @@ export default function GameCanvas() {
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [updateUI]);
+  }, [updateUI, showEvolution]);
 
   const handleRestart = useCallback(() => {
     if (!gameRef.current || !rendererRef.current) return;
@@ -459,6 +472,14 @@ export default function GameCanvas() {
 
   return (
     <div className="flex h-screen bg-[#0a0a0f] text-gray-200 overflow-hidden">
+      {showEvolution && gameRef.current && (
+        <EvolutionPanel
+          speciesStats={speciesStats}
+          onClose={() => setShowEvolution(false)}
+          turn={stats.turn}
+          depth={stats.depth}
+        />
+      )}
       {showDeathScreen && gameRef.current && (
         <DeathScreen
           state={gameRef.current.state}
@@ -593,6 +614,7 @@ export default function GameCanvas() {
           </p>
           <p>
             <kbd className="bg-gray-800 px-1 rounded">space</kbd> wait
+            <kbd className="bg-gray-800 px-1 rounded ml-2">E</kbd> evolution
           </p>
           {gameOver && !showDeathScreen && (
             <p className="text-red-400">
