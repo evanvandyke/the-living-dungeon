@@ -12,8 +12,10 @@ export class GameLoop {
   evolution: EvolutionEngine;
   visible: Set<string> = new Set();
   envColors: { floor: Color; wall: Color; accent: Color };
+  readonly seed: number;
 
   constructor(seed = Date.now()) {
+    this.seed = seed;
     this.evolution = new EvolutionEngine(seed);
     this.level = generateDungeon(60, 40, 0, seed);
     this.envColors = generateEnvironmentColors(0, seed);
@@ -599,6 +601,26 @@ export class GameLoop {
     this.spawnItemsForLevel();
     this.updateFOV();
     this.addMessage(`You ascend to depth ${this.state.depth}...`, "#88aaff");
+  }
+
+  getScore(): number {
+    const depthScore = this.state.depth * 100;
+    const killScore = this.state.player.killCount * 10;
+    const levelBonus = this.state.player.stats.level * 25;
+    const efficiencyPenalty = Math.floor(this.state.turn * 0.5);
+    return Math.max(0, depthScore + killScore + levelBonus - efficiencyPenalty);
+  }
+
+  getRunSummary() {
+    return {
+      seed: this.seed,
+      score: this.getScore(),
+      depth: this.state.depth,
+      turns: this.state.turn,
+      kills: this.state.player.killCount,
+      level: this.state.player.stats.level,
+      evolutionEvents: this.state.evolutionLog.length,
+    };
   }
 
   getSpeciesStats() {

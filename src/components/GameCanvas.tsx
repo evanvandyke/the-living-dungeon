@@ -28,6 +28,8 @@ export default function GameCanvas() {
     attack: 5,
     defense: 2,
     kills: 0,
+    score: 0,
+    seed: 0,
   });
   const [gameOver, setGameOver] = useState(false);
   const [evolutionEvents, setEvolutionEvents] = useState<string[]>([]);
@@ -49,6 +51,8 @@ export default function GameCanvas() {
       attack: s.player.stats.attack,
       defense: s.player.stats.defense,
       kills: s.player.killCount,
+      score: gameRef.current.getScore(),
+      seed: gameRef.current.seed,
     });
     setMessages(s.messages.slice(-8));
     setGameOver(s.gameOver);
@@ -555,6 +559,14 @@ export default function GameCanvas() {
           <div className="flex justify-between">
             <span className="text-gray-400">Kills</span>
             <span className="text-red-300">{stats.kills}</span>
+          </div>
+          <div className="flex justify-between pt-1 border-t border-gray-800">
+            <span className="text-gray-400">Score</span>
+            <span className="text-yellow-200 font-bold">{stats.score}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500 text-xs">Seed</span>
+            <span className="text-gray-600 text-xs font-mono">{stats.seed}</span>
           </div>
         </div>
 
