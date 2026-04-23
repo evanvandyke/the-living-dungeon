@@ -487,6 +487,8 @@ export default function GameCanvas() {
       {showDeathScreen && gameRef.current && (
         <DeathScreen
           state={gameRef.current.state}
+          score={stats.score}
+          seed={stats.seed}
           speciesStats={speciesStats}
           onRestart={handleRestart}
         />
