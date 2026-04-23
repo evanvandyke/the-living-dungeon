@@ -7,14 +7,6 @@ import { TileType } from "../game/generation/dungeon";
 
 const TILE_SIZE = 24;
 
-const TILE_GLYPHS: Record<number, { glyph: string; color: Color }> = {
-  [TileType.STAIRS_DOWN]: { glyph: ">", color: { r: 255, g: 200, b: 50 } },
-  [TileType.STAIRS_UP]: { glyph: "<", color: { r: 100, g: 200, b: 255 } },
-  [TileType.WATER]: { glyph: "~", color: { r: 50, g: 120, b: 220 } },
-  [TileType.LAVA]: { glyph: "~", color: { r: 255, g: 80, b: 20 } },
-  [TileType.DOOR]: { glyph: "+", color: { r: 180, g: 140, b: 80 } },
-};
-
 export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<GameLoop | null>(null);
@@ -58,17 +50,90 @@ export default function GameCanvas() {
     );
   }, []);
 
+  const processVisualEvents = useCallback(() => {
+    const game = gameRef.current;
+    const renderer = rendererRef.current;
+    if (!game || !renderer) return;
+
+    const events = game.drainVisualEvents();
+    const px = game.state.player.pos.x;
+    const py = game.state.player.pos.y;
+    const camCol = px - Math.floor(renderer.cols / 2);
+    const camRow = py - Math.floor(renderer.rows / 2);
+
+    for (const event of events) {
+      const screenX = (event.x - camCol) * TILE_SIZE;
+      const screenY = (event.y - camRow) * TILE_SIZE;
+
+      switch (event.type) {
+        case "death":
+          if (event.palette) {
+            renderer.spawnDeathExplosion(
+              screenX,
+              screenY,
+              event.palette,
+              event.intensity || 1
+            );
+          }
+          renderer.shake((event.intensity || 1) * 0.4);
+          break;
+
+        case "hit":
+          renderer.spawnParticles(
+            screenX + TILE_SIZE / 2,
+            screenY + TILE_SIZE / 2,
+            { r: 255, g: 200, b: 100 },
+            5,
+            1.5,
+            "spark"
+          );
+          renderer.shake(0.2);
+          break;
+
+        case "playerHit":
+          renderer.spawnParticles(
+            screenX + TILE_SIZE / 2,
+            screenY + TILE_SIZE / 2,
+            { r: 255, g: 50, b: 50 },
+            8,
+            2,
+            "spark"
+          );
+          renderer.shake(event.intensity || 0.5);
+          break;
+
+        case "levelUp":
+          for (let i = 0; i < 30; i++) {
+            const angle = (i / 30) * Math.PI * 2;
+            renderer.spawnParticles(
+              screenX + TILE_SIZE / 2 + Math.cos(angle) * 15,
+              screenY + TILE_SIZE / 2 + Math.sin(angle) * 15,
+              { r: 255, g: 255, b: 100 },
+              2,
+              1,
+              "glow"
+            );
+          }
+          renderer.shake(0.3);
+          break;
+      }
+    }
+  }, []);
+
   const render = useCallback(() => {
     const game = gameRef.current;
     const renderer = rendererRef.current;
     if (!game || !renderer) return;
 
+    processVisualEvents();
     renderer.clear();
 
     const px = game.state.player.pos.x;
     const py = game.state.player.pos.y;
     const camCol = px - Math.floor(renderer.cols / 2);
     const camRow = py - Math.floor(renderer.rows / 2);
+    const playerScreenCol = px - camCol;
+    const playerScreenRow = py - camRow;
 
     for (let row = 0; row < renderer.rows; row++) {
       for (let col = 0; col < renderer.cols; col++) {
@@ -84,17 +149,29 @@ export default function GameCanvas() {
           continue;
 
         const tile = game.level.tiles[worldRow][worldCol];
-
         if (tile === TileType.VOID) continue;
 
         const env = game.envColors;
+
         if (tile === TileType.WALL) {
-          renderer.drawTile(col, row, env.wall);
+          renderer.drawWallWithFlicker(col, row, env.wall, playerScreenCol, playerScreenRow);
         } else if (tile === TileType.FLOOR) {
-          renderer.drawTile(col, row, env.floor);
-        } else if (TILE_GLYPHS[tile]) {
-          const spec = TILE_GLYPHS[tile];
-          renderer.drawTile(col, row, env.floor, spec.glyph, spec.color);
+          renderer.drawFloorWithLight(col, row, env.floor, playerScreenCol, playerScreenRow);
+          renderer.spawnAmbientDust(col * TILE_SIZE, row * TILE_SIZE);
+        } else if (tile === TileType.WATER) {
+          renderer.drawAnimatedWater(col, row, { r: 20, g: 50, b: 120 });
+          renderer.spawnWaterRipple(col * TILE_SIZE, row * TILE_SIZE);
+        } else if (tile === TileType.LAVA) {
+          renderer.drawAnimatedLava(col, row, { r: 200, g: 60, b: 10 });
+          renderer.spawnLavaEmber(col * TILE_SIZE, row * TILE_SIZE);
+        } else if (tile === TileType.STAIRS_DOWN) {
+          renderer.drawFloorWithLight(col, row, env.floor, playerScreenCol, playerScreenRow);
+          renderer.drawTile(col, row, { r: 0, g: 0, b: 0, a: 0 }, ">", { r: 255, g: 200, b: 50 });
+        } else if (tile === TileType.STAIRS_UP) {
+          renderer.drawFloorWithLight(col, row, env.floor, playerScreenCol, playerScreenRow);
+          renderer.drawTile(col, row, { r: 0, g: 0, b: 0, a: 0 }, "<", { r: 100, g: 200, b: 255 });
+        } else if (tile === TileType.DOOR) {
+          renderer.drawTile(col, row, env.floor, "+", { r: 180, g: 140, b: 80 });
         }
       }
     }
@@ -116,12 +193,29 @@ export default function GameCanvas() {
           armor: { r: 100, g: 150, b: 255 },
           scroll: { r: 255, g: 255, b: 150 },
         };
+        const bobY = Math.sin(renderer.time * 2 + screenCol + screenRow) * 2;
+        const glowAlpha = 0.15 + Math.sin(renderer.time * 3 + screenCol * 2) * 0.1;
+
+        const ix = screenCol * TILE_SIZE + TILE_SIZE / 2;
+        const iy = screenRow * TILE_SIZE + TILE_SIZE / 2 + bobY;
+        const c = itemColor[item.type] || { r: 255, g: 255, b: 255 };
+        const gradient = renderer["ctx"].createRadialGradient(ix, iy, 0, ix, iy, TILE_SIZE * 0.6);
+        gradient.addColorStop(0, `rgba(${c.r},${c.g},${c.b},${glowAlpha})`);
+        gradient.addColorStop(1, `rgba(${c.r},${c.g},${c.b},0)`);
+        renderer["ctx"].fillStyle = gradient;
+        renderer["ctx"].fillRect(
+          screenCol * TILE_SIZE,
+          screenRow * TILE_SIZE,
+          TILE_SIZE,
+          TILE_SIZE
+        );
+
         renderer.drawTile(
           screenCol,
           screenRow,
-          game.envColors.floor,
+          { r: 0, g: 0, b: 0, a: 0 },
           item.glyph,
-          itemColor[item.type] || { r: 255, g: 255, b: 255 }
+          c
         );
       }
     }
@@ -156,8 +250,7 @@ export default function GameCanvas() {
       }
     }
 
-    const playerScreenCol = px - camCol;
-    const playerScreenRow = py - camRow;
+    renderer.drawPlayerGlow(playerScreenCol, playerScreenRow);
     renderer.drawTile(
       playerScreenCol,
       playerScreenRow,
@@ -167,9 +260,9 @@ export default function GameCanvas() {
     );
 
     renderer.drawFogOfWar(game.visible, game.state.player.explored, camCol, camRow);
-
     renderer.updateParticles(0.016);
-  }, []);
+    renderer.endFrame();
+  }, [processVisualEvents]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

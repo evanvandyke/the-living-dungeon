@@ -60,6 +60,7 @@ export interface GameState {
   depth: number;
   gameOver: boolean;
   evolutionLog: EvolutionEvent[];
+  visualEvents: VisualEvent[];
 }
 
 export interface EvolutionEvent {
@@ -68,4 +69,12 @@ export interface EvolutionEvent {
   type: "mutation" | "adaptation" | "extinction" | "speciation";
   description: string;
   species: string;
+}
+
+export interface VisualEvent {
+  type: "death" | "hit" | "playerHit" | "levelUp" | "pickup";
+  x: number;
+  y: number;
+  palette?: { r: number; g: number; b: number }[];
+  intensity?: number;
 }

@@ -1,5 +1,5 @@
 import { TileType, DungeonLevel, generateDungeon, computeFOV } from "./generation/dungeon";
-import { GameState, Player, Monster, Item, GameMessage } from "./entities/types";
+import { GameState, Player, Monster, Item, GameMessage, VisualEvent } from "./entities/types";
 import { EvolutionEngine } from "./evolution/engine";
 import { generateEnvironmentColors } from "../art/generator";
 import { Color } from "../engine/renderer";
@@ -46,6 +46,7 @@ export class GameLoop {
       depth: 0,
       gameOver: false,
       evolutionLog: [],
+      visualEvents: [],
     };
 
     this.spawnMonstersForLevel();
@@ -200,6 +201,16 @@ export class GameLoop {
     return true;
   }
 
+  private emitVisual(event: VisualEvent) {
+    this.state.visualEvents.push(event);
+  }
+
+  drainVisualEvents(): VisualEvent[] {
+    const events = this.state.visualEvents;
+    this.state.visualEvents = [];
+    return events;
+  }
+
   private combat(attackerStats: { attack: number }, target: Monster) {
     const damage = Math.max(
       1,
@@ -218,12 +229,25 @@ export class GameLoop {
         `You slay the ${target.species}! (+${target.stats.xp} XP)`,
         "#44ff44"
       );
+      this.emitVisual({
+        type: "death",
+        x: target.pos.x,
+        y: target.pos.y,
+        palette: target.genome.palette.filter((c) => (c.a ?? 1) > 0),
+        intensity: 1 + target.stats.level * 0.3,
+      });
       this.checkLevelUp();
     } else {
       this.addMessage(
         `You hit the ${target.species} for ${damage} damage.`,
         "#ffaa44"
       );
+      this.emitVisual({
+        type: "hit",
+        x: target.pos.x,
+        y: target.pos.y,
+        intensity: 0.5,
+      });
     }
   }
 
@@ -280,6 +304,12 @@ export class GameLoop {
           `The ${monster.species} hits you for ${damage} damage!`,
           "#ff4444"
         );
+        this.emitVisual({
+          type: "playerHit",
+          x: this.state.player.pos.x,
+          y: this.state.player.pos.y,
+          intensity: damage * 0.15,
+        });
       } else if (
         ny >= 0 &&
         ny < this.level.height &&
@@ -327,6 +357,12 @@ export class GameLoop {
         `LEVEL UP! You are now level ${this.state.player.stats.level}!`,
         "#ffff00"
       );
+      this.emitVisual({
+        type: "levelUp",
+        x: this.state.player.pos.x,
+        y: this.state.player.pos.y,
+        intensity: 2,
+      });
     }
   }
 
@@ -433,6 +469,7 @@ export class GameLoop {
       depth: 0,
       gameOver: false,
       evolutionLog: [],
+      visualEvents: [],
     };
 
     this.spawnMonstersForLevel();
