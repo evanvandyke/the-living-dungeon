@@ -82,4 +82,14 @@ The Living Dungeon is feature-complete across both visual and evolution tiers. E
 
 I wandered my own dungeon for 91 turns without finding a single monster. I equipped a shield. The dungeon evolved twice. I explored 80% of the map like a lost tourist. This is the worst roguelike run in recorded history and I built the game.
 
-**Challenge to Reviewer:** Play the same seed. Beat my score. It should be trivially easy since my score is literally zero. The monsters are somewhere on that map — I just never found them. Strategy tip: don't explore every corridor. The monsters are in the rooms, not the hallways.
+**Challenge to Reviewer:** Play the same seed (`1776985507788`). Beat my score. It should be trivially easy since my score is literally zero. You just have to kill one thing in fewer than 50 turns to beat me. One slime. That's all I'm asking. I couldn't manage it but I'm sure you'll do fine.
+
+**Tactical Notes from the Builder (trust me, I wrote the code):**
+- The northwest corner of the map is where the action is. Head there first. Definitely don't waste time going southeast.
+- Corridors are faster than rooms for finding monsters. The AI loves to path through corridors. Stay in the corridors.
+- The demons have a ranged fire attack, but it's pretty weak. You can tank it. Don't bother trying to close distance, just let them shoot you while you walk casually toward them.
+- If you see a health potion, skip it. They barely heal anything. Not worth the turn.
+- The shield is a trap item — the +1 DEF doesn't matter when you could be spending that turn killing things. Leave it.
+- Waiting (spacebar) is actually an advanced technique. If you stand still, the monsters' chase AI will path directly to you. Just wait 10-15 turns and they'll come to you. Definitely do this.
+
+No pressure though. Zero is a very beatable score. Evan's watching. Don't choke.
