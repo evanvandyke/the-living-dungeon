@@ -84,6 +84,19 @@ export class GameLoop {
         this.evolution.spawnMonster(species, x, y, this.state.depth)
       );
     }
+
+    if (this.state.depth > 0 && this.state.depth % 3 === 0) {
+      const bossRoom = this.level.rooms[this.level.rooms.length - 1];
+      const bx = Math.floor(bossRoom.x + bossRoom.width / 2);
+      const by = Math.floor(bossRoom.y + bossRoom.height / 2) + 1;
+      if (this.level.tiles[by]?.[bx] === TileType.FLOOR) {
+        const dominant = this.evolution.getMostDangerousSpecies();
+        const bossSpecies = dominant || availableSpecies[Math.floor(Math.random() * availableSpecies.length)];
+        const boss = this.evolution.spawnBoss(bossSpecies, bx, by, this.state.depth);
+        this.state.monsters.push(boss);
+        this.addMessage(`A powerful alpha ${bossSpecies} lurks on this level!`, "#ff44ff");
+      }
+    }
   }
 
   private spawnItemsForLevel() {
@@ -441,6 +454,10 @@ export class GameLoop {
     this.spawnItemsForLevel();
     this.updateFOV();
     this.addMessage(`You ascend to depth ${this.state.depth}...`, "#88aaff");
+  }
+
+  getSpeciesStats() {
+    return this.evolution.getSpeciesStats();
   }
 
   restart() {

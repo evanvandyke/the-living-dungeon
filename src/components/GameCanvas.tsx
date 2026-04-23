@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import { Renderer, Color } from "../engine/renderer";
 import { GameLoop } from "../game/gameLoop";
 import { TileType } from "../game/generation/dungeon";
+import DeathScreen from "./DeathScreen";
 
 const TILE_SIZE = 24;
 
@@ -28,6 +29,8 @@ export default function GameCanvas() {
   });
   const [gameOver, setGameOver] = useState(false);
   const [evolutionEvents, setEvolutionEvents] = useState<string[]>([]);
+  const [showDeathScreen, setShowDeathScreen] = useState(false);
+  const [speciesStats, setSpeciesStats] = useState<Map<string, { totalKills: number; totalDeaths: number; currentGeneration: number }>>(new Map());
 
   const updateUI = useCallback(() => {
     if (!gameRef.current) return;
@@ -45,10 +48,14 @@ export default function GameCanvas() {
     });
     setMessages(s.messages.slice(-8));
     setGameOver(s.gameOver);
+    if (s.gameOver && !showDeathScreen) {
+      setShowDeathScreen(true);
+      setSpeciesStats(gameRef.current.getSpeciesStats());
+    }
     setEvolutionEvents(
       s.evolutionLog.slice(-5).map((e) => `[T${e.turn}] ${e.description}`)
     );
-  }, []);
+  }, [showDeathScreen]);
 
   const processVisualEvents = useCallback(() => {
     const game = gameRef.current;
@@ -291,10 +298,6 @@ export default function GameCanvas() {
       if (!game) return;
 
       if (game.state.gameOver) {
-        if (e.key === "r" || e.key === "R") {
-          game.restart();
-          updateUI();
-        }
         return;
       }
 
@@ -347,8 +350,23 @@ export default function GameCanvas() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [updateUI]);
 
+  const handleRestart = useCallback(() => {
+    if (!gameRef.current) return;
+    gameRef.current.restart();
+    setShowDeathScreen(false);
+    setGameOver(false);
+    updateUI();
+  }, [updateUI]);
+
   return (
     <div className="flex h-screen bg-[#0a0a0f] text-gray-200 overflow-hidden">
+      {showDeathScreen && gameRef.current && (
+        <DeathScreen
+          state={gameRef.current.state}
+          speciesStats={speciesStats}
+          onRestart={handleRestart}
+        />
+      )}
       <div className="flex-1 flex items-center justify-center p-2">
         <canvas
           ref={canvasRef}
@@ -458,7 +476,7 @@ export default function GameCanvas() {
           <p>
             <kbd className="bg-gray-800 px-1 rounded">space</kbd> wait
           </p>
-          {gameOver && (
+          {gameOver && !showDeathScreen && (
             <p className="text-red-400">
               <kbd className="bg-gray-800 px-1 rounded">R</kbd> restart
             </p>

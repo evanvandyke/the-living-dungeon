@@ -181,4 +181,42 @@ export class EvolutionEngine {
   getSpeciesStats(): Map<string, SpeciesRecord> {
     return new Map(this.speciesRecords);
   }
+
+  spawnBoss(
+    species: string,
+    x: number,
+    y: number,
+    depth: number
+  ): Monster {
+    const record = this.speciesRecords.get(species);
+    const gen = record ? record.currentGeneration + 3 : 3;
+
+    let genome = generateGenome(species, this.seed + this.nextId + 9999, gen);
+    for (let i = 0; i < 3; i++) {
+      genome = mutateGenome(genome, this.seed + this.nextId + i * 333);
+    }
+    genome.complexity = Math.min(1, genome.complexity + 0.3);
+
+    const power = 3 + depth * 1.5 + gen * 0.5;
+
+    return {
+      id: `boss_${this.nextId++}`,
+      pos: { x, y },
+      stats: {
+        hp: Math.floor(30 + power * 8),
+        maxHp: Math.floor(30 + power * 8),
+        attack: Math.floor(5 + power * 2),
+        defense: Math.floor(3 + power * 1.5),
+        speed: Math.max(1, Math.floor(2 + power * 0.3)),
+        xp: Math.floor(20 + power * 5),
+        level: Math.floor(power * 1.5),
+      },
+      species: `alpha ${species}`,
+      genome,
+      sprite: genomeToSprite(genome),
+      behavior: "chase",
+      killCount: 0,
+      alive: true,
+    };
+  }
 }
