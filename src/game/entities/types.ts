@@ -24,6 +24,8 @@ export interface Player {
   deepestLevel: number;
 }
 
+export type MonsterAbility = "ranged" | "teleport" | "summon" | "poison" | "charge" | null;
+
 export interface Monster {
   id: string;
   pos: Position;
@@ -32,6 +34,8 @@ export interface Monster {
   genome: CreatureGenome;
   sprite: number[][];
   behavior: "wander" | "chase" | "flee" | "ambush";
+  ability: MonsterAbility;
+  abilityCooldown: number;
   killCount: number;
   alive: boolean;
 }
@@ -72,9 +76,11 @@ export interface EvolutionEvent {
 }
 
 export interface VisualEvent {
-  type: "death" | "hit" | "playerHit" | "levelUp" | "pickup";
+  type: "death" | "hit" | "playerHit" | "levelUp" | "pickup" | "projectile" | "teleport" | "summon" | "poison";
   x: number;
   y: number;
+  targetX?: number;
+  targetY?: number;
   palette?: { r: number; g: number; b: number }[];
   intensity?: number;
 }

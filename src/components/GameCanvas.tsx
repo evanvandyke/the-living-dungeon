@@ -13,6 +13,7 @@ export default function GameCanvas() {
   const gameRef = useRef<GameLoop | null>(null);
   const rendererRef = useRef<Renderer | null>(null);
   const animFrameRef = useRef<number>(0);
+  const cameraRef = useRef({ x: 0, y: 0 });
   const [messages, setMessages] = useState<{ text: string; color: string }[]>(
     []
   );
@@ -142,6 +143,62 @@ export default function GameCanvas() {
           }
           renderer.shake(0.3);
           break;
+
+        case "projectile": {
+          const tx = event.targetX !== undefined ? (event.targetX - camCol) * TILE_SIZE + TILE_SIZE / 2 : screenX;
+          const ty = event.targetY !== undefined ? (event.targetY - camRow) * TILE_SIZE + TILE_SIZE / 2 : screenY;
+          const steps = 5;
+          for (let i = 0; i < steps; i++) {
+            const t = i / steps;
+            renderer.spawnParticles(
+              screenX + TILE_SIZE / 2 + (tx - screenX - TILE_SIZE / 2) * t,
+              screenY + TILE_SIZE / 2 + (ty - screenY - TILE_SIZE / 2) * t,
+              { r: 255, g: 120, b: 30 },
+              2,
+              0.5,
+              "ember"
+            );
+          }
+          break;
+        }
+
+        case "teleport":
+          for (let i = 0; i < 15; i++) {
+            renderer.spawnParticles(
+              screenX + TILE_SIZE / 2,
+              screenY + TILE_SIZE / 2,
+              { r: 150, g: 100, b: 255 },
+              1,
+              2,
+              "glow"
+            );
+          }
+          break;
+
+        case "summon":
+          for (let i = 0; i < 20; i++) {
+            const angle = (i / 20) * Math.PI * 2;
+            renderer.spawnParticles(
+              screenX + TILE_SIZE / 2 + Math.cos(angle) * 10,
+              screenY + TILE_SIZE / 2 + Math.sin(angle) * 10,
+              { r: 100, g: 220, b: 100 },
+              1,
+              0.8,
+              "glow"
+            );
+          }
+          break;
+
+        case "poison":
+          renderer.spawnParticles(
+            screenX + TILE_SIZE / 2,
+            screenY + TILE_SIZE / 2,
+            { r: 80, g: 200, b: 80 },
+            12,
+            1.5,
+            "dust"
+          );
+          break;
       }
     }
   }, []);
@@ -156,8 +213,19 @@ export default function GameCanvas() {
 
     const px = game.state.player.pos.x;
     const py = game.state.player.pos.y;
-    const camCol = px - Math.floor(renderer.cols / 2);
-    const camRow = py - Math.floor(renderer.rows / 2);
+    const targetCamX = px - Math.floor(renderer.cols / 2);
+    const targetCamY = py - Math.floor(renderer.rows / 2);
+
+    const cam = cameraRef.current;
+    const lerpSpeed = 0.15;
+    cam.x += (targetCamX - cam.x) * lerpSpeed;
+    cam.y += (targetCamY - cam.y) * lerpSpeed;
+
+    if (Math.abs(cam.x - targetCamX) < 0.01) cam.x = targetCamX;
+    if (Math.abs(cam.y - targetCamY) < 0.01) cam.y = targetCamY;
+
+    const camCol = Math.round(cam.x);
+    const camRow = Math.round(cam.y);
     const playerScreenCol = px - camCol;
     const playerScreenRow = py - camRow;
 
@@ -300,6 +368,12 @@ export default function GameCanvas() {
 
     rendererRef.current = new Renderer(canvas, TILE_SIZE);
     gameRef.current = new GameLoop();
+    const startPx = gameRef.current.state.player.pos.x;
+    const startPy = gameRef.current.state.player.pos.y;
+    cameraRef.current = {
+      x: startPx - Math.floor(rendererRef.current.cols / 2),
+      y: startPy - Math.floor(rendererRef.current.rows / 2),
+    };
     updateUI();
 
     const loop = () => {
@@ -370,8 +444,14 @@ export default function GameCanvas() {
   }, [updateUI]);
 
   const handleRestart = useCallback(() => {
-    if (!gameRef.current) return;
+    if (!gameRef.current || !rendererRef.current) return;
     gameRef.current.restart();
+    const startPx = gameRef.current.state.player.pos.x;
+    const startPy = gameRef.current.state.player.pos.y;
+    cameraRef.current = {
+      x: startPx - Math.floor(rendererRef.current.cols / 2),
+      y: startPy - Math.floor(rendererRef.current.rows / 2),
+    };
     setShowDeathScreen(false);
     setGameOver(false);
     updateUI();

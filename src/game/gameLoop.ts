@@ -268,9 +268,13 @@ export class GameLoop {
     for (const monster of this.state.monsters) {
       if (!monster.alive) continue;
 
+      if (monster.abilityCooldown > 0) monster.abilityCooldown--;
+
       const px = this.state.player.pos.x;
       const py = this.state.player.pos.y;
       const dist = Math.abs(monster.pos.x - px) + Math.abs(monster.pos.y - py);
+
+      if (this.tryUseAbility(monster, dist)) continue;
 
       let dx = 0;
       let dy = 0;
@@ -304,25 +308,7 @@ export class GameLoop {
       const ny = monster.pos.y + dy;
 
       if (nx === px && ny === py) {
-        const damage = Math.max(
-          1,
-          monster.stats.attack -
-            this.state.player.stats.defense +
-            Math.floor(Math.random() * 2)
-        );
-        this.state.player.stats.hp -= damage;
-        this.evolution.recordMonsterKill(monster.species);
-        monster.killCount++;
-        this.addMessage(
-          `The ${monster.species} hits you for ${damage} damage!`,
-          "#ff4444"
-        );
-        this.emitVisual({
-          type: "playerHit",
-          x: this.state.player.pos.x,
-          y: this.state.player.pos.y,
-          intensity: damage * 0.15,
-        });
+        this.monsterAttacksPlayer(monster);
       } else if (
         ny >= 0 &&
         ny < this.level.height &&
@@ -337,6 +323,163 @@ export class GameLoop {
         monster.pos.y = ny;
       }
     }
+  }
+
+  private monsterAttacksPlayer(monster: Monster) {
+    const damage = Math.max(
+      1,
+      monster.stats.attack -
+        this.state.player.stats.defense +
+        Math.floor(Math.random() * 2)
+    );
+    this.state.player.stats.hp -= damage;
+    this.evolution.recordMonsterKill(monster.species);
+    monster.killCount++;
+    this.addMessage(
+      `The ${monster.species} hits you for ${damage} damage!`,
+      "#ff4444"
+    );
+    this.emitVisual({
+      type: "playerHit",
+      x: this.state.player.pos.x,
+      y: this.state.player.pos.y,
+      intensity: damage * 0.15,
+    });
+  }
+
+  private tryUseAbility(monster: Monster, dist: number): boolean {
+    if (!monster.ability || monster.abilityCooldown > 0) return false;
+
+    const px = this.state.player.pos.x;
+    const py = this.state.player.pos.y;
+
+    switch (monster.ability) {
+      case "ranged": {
+        if (dist > 2 && dist <= 6) {
+          const damage = Math.max(1, Math.floor(monster.stats.attack * 0.7) - this.state.player.stats.defense);
+          this.state.player.stats.hp -= damage;
+          monster.abilityCooldown = 3;
+          this.addMessage(`The ${monster.species} hurls fire at you! (-${damage} HP)`, "#ff6622");
+          this.emitVisual({
+            type: "projectile",
+            x: monster.pos.x,
+            y: monster.pos.y,
+            targetX: px,
+            targetY: py,
+            palette: [{ r: 255, g: 100, b: 20 }],
+            intensity: 1,
+          });
+          this.emitVisual({
+            type: "playerHit",
+            x: px,
+            y: py,
+            intensity: damage * 0.1,
+          });
+          return true;
+        }
+        break;
+      }
+      case "teleport": {
+        if (dist > 3 && dist <= 8) {
+          this.emitVisual({ type: "teleport", x: monster.pos.x, y: monster.pos.y, intensity: 1 });
+          const dirs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]];
+          for (const [ddx, ddy] of dirs) {
+            const tx = px + ddx;
+            const ty = py + ddy;
+            if (
+              ty >= 0 && ty < this.level.height &&
+              tx >= 0 && tx < this.level.width &&
+              this.level.tiles[ty][tx] === TileType.FLOOR &&
+              !this.state.monsters.some((m) => m.alive && m.pos.x === tx && m.pos.y === ty)
+            ) {
+              monster.pos.x = tx;
+              monster.pos.y = ty;
+              monster.abilityCooldown = 4;
+              this.addMessage(`The ${monster.species} teleports behind you!`, "#aa66ff");
+              this.emitVisual({ type: "teleport", x: tx, y: ty, intensity: 0.8 });
+              return true;
+            }
+          }
+        }
+        break;
+      }
+      case "summon": {
+        if (dist <= 5 && Math.random() < 0.15) {
+          const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+          for (const [ddx, ddy] of dirs) {
+            const sx = monster.pos.x + ddx;
+            const sy = monster.pos.y + ddy;
+            if (
+              sy >= 0 && sy < this.level.height &&
+              sx >= 0 && sx < this.level.width &&
+              this.level.tiles[sy][sx] === TileType.FLOOR &&
+              !this.state.monsters.some((m) => m.alive && m.pos.x === sx && m.pos.y === sy) &&
+              !(sx === px && sy === py)
+            ) {
+              const minion = this.evolution.spawnMonster("slime", sx, sy, this.state.depth);
+              minion.stats.hp = Math.floor(minion.stats.hp * 0.5);
+              minion.stats.maxHp = minion.stats.hp;
+              this.state.monsters.push(minion);
+              monster.abilityCooldown = 6;
+              this.addMessage(`The ${monster.species} spawns a slime!`, "#88ff88");
+              this.emitVisual({ type: "summon", x: sx, y: sy, intensity: 1 });
+              return true;
+            }
+          }
+        }
+        break;
+      }
+      case "poison": {
+        if (dist <= 1) {
+          const poisonDmg = 2 + Math.floor(this.state.depth * 0.5);
+          this.state.player.stats.hp -= poisonDmg;
+          monster.abilityCooldown = 3;
+          this.addMessage(`The ${monster.species} poisons you! (-${poisonDmg} HP)`, "#44cc44");
+          this.emitVisual({ type: "poison", x: px, y: py, intensity: 0.5 });
+          return false;
+        }
+        break;
+      }
+      case "charge": {
+        if (dist >= 3 && dist <= 6) {
+          const ddx = Math.sign(px - monster.pos.x);
+          const ddy = Math.sign(py - monster.pos.y);
+          let cx = monster.pos.x;
+          let cy = monster.pos.y;
+          for (let step = 0; step < 3; step++) {
+            const nx2 = cx + ddx;
+            const ny2 = cy + ddy;
+            if (nx2 === px && ny2 === py) {
+              monster.pos.x = cx;
+              monster.pos.y = cy;
+              const damage = Math.max(1, Math.floor(monster.stats.attack * 1.5) - this.state.player.stats.defense);
+              this.state.player.stats.hp -= damage;
+              monster.abilityCooldown = 4;
+              this.addMessage(`The ${monster.species} charges into you! (-${damage} HP)`, "#ffaa44");
+              this.emitVisual({ type: "playerHit", x: px, y: py, intensity: damage * 0.2 });
+              return true;
+            }
+            if (
+              ny2 >= 0 && ny2 < this.level.height &&
+              nx2 >= 0 && nx2 < this.level.width &&
+              this.level.tiles[ny2][nx2] === TileType.FLOOR &&
+              !this.state.monsters.some((m) => m.alive && m !== monster && m.pos.x === nx2 && m.pos.y === ny2)
+            ) {
+              cx = nx2;
+              cy = ny2;
+            } else {
+              break;
+            }
+          }
+          monster.pos.x = cx;
+          monster.pos.y = cy;
+          monster.abilityCooldown = 3;
+          return true;
+        }
+        break;
+      }
+    }
+    return false;
   }
 
   private pickupItem(item: Item) {

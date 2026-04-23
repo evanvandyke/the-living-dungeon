@@ -5,7 +5,7 @@ import {
   mutateGenome,
   crossGenomes,
 } from "../../art/generator";
-import { Monster, EvolutionEvent } from "../entities/types";
+import { Monster, EvolutionEvent, MonsterAbility } from "../entities/types";
 
 interface SpeciesRecord {
   species: string;
@@ -101,6 +101,8 @@ export class EvolutionEngine {
       genome,
       sprite: genomeToSprite(genome),
       behavior: this.pickBehavior(species, fitness),
+      ability: this.pickAbility(species),
+      abilityCooldown: 0,
       killCount: 0,
       alive: true,
     };
@@ -122,6 +124,18 @@ export class EvolutionEngine {
       fungal: "ambush",
     };
     return behaviors[species] || "wander";
+  }
+
+  private pickAbility(species: string): MonsterAbility {
+    const abilities: Record<string, MonsterAbility> = {
+      demon: "ranged",
+      wraith: "teleport",
+      fungal: "summon",
+      insect: "poison",
+      golem: "charge",
+      slime: null,
+    };
+    return abilities[species] || null;
   }
 
   evolveSpecies(species: string, turn: number, depth: number): EvolutionEvent | null {
@@ -215,6 +229,8 @@ export class EvolutionEngine {
       genome,
       sprite: genomeToSprite(genome),
       behavior: "chase",
+      ability: this.pickAbility(species),
+      abilityCooldown: 0,
       killCount: 0,
       alive: true,
     };
