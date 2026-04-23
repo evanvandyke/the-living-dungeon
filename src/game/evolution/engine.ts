@@ -166,6 +166,16 @@ export class EvolutionEngine {
       };
     }
 
+    if (record.totalDeaths > 15 && fitness < 0.05) {
+      return {
+        turn,
+        depth,
+        type: "extinction",
+        description: `The ${species} species has been hunted to near-extinction!`,
+        species,
+      };
+    }
+
     if (turn % 50 === 0) {
       record.currentGeneration++;
       return {

@@ -69,17 +69,50 @@ export function generateGenome(
   generation = 0
 ): CreatureGenome {
   const rng = seededRandom(seed);
-  const palette = SPECIES_PALETTES[species] || SPECIES_PALETTES.slime;
-  const complexity = Math.min(1, 0.3 + generation * 0.05 + rng() * 0.3);
+  const basePalette = SPECIES_PALETTES[species] || SPECIES_PALETTES.slime;
+
+  const palette = basePalette.map((c, i) => {
+    if (i === 0) return c;
+    const genBoost = Math.min(generation * 3, 40);
+    return {
+      r: Math.min(255, c.r + Math.floor(rng() * genBoost)),
+      g: Math.min(255, c.g + Math.floor(rng() * genBoost)),
+      b: Math.min(255, c.b + Math.floor(rng() * genBoost)),
+      a: c.a,
+    };
+  });
+
+  const complexity = Math.min(1, 0.3 + generation * 0.08 + rng() * 0.2);
 
   const bodyPlan: number[] = [];
   const size = 8;
-  for (let i = 0; i < size * Math.ceil(size / 2); i++) {
-    const roll = rng();
-    if (roll < complexity * 0.6) {
-      bodyPlan.push(Math.floor(rng() * (palette.length - 1)) + 1);
-    } else {
-      bodyPlan.push(0);
+  const half = Math.ceil(size / 2);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < half; x++) {
+      const roll = rng();
+      if (roll < complexity * 0.6) {
+        bodyPlan.push(Math.floor(rng() * (palette.length - 1)) + 1);
+      } else {
+        bodyPlan.push(0);
+      }
+    }
+  }
+
+  if (generation >= 2) {
+    const eyeY = Math.floor(size * 0.25);
+    const eyeX = Math.floor(half * 0.6);
+    const eyeIdx = eyeY * half + eyeX;
+    if (eyeIdx < bodyPlan.length) {
+      bodyPlan[eyeIdx] = palette.length - 1;
+    }
+  }
+
+  if (generation >= 4) {
+    for (let x = 0; x < half; x++) {
+      if (rng() < 0.4) {
+        bodyPlan[x] = Math.floor(rng() * (palette.length - 1)) + 1;
+        bodyPlan[(size - 1) * half + x] = Math.floor(rng() * (palette.length - 1)) + 1;
+      }
     }
   }
 
@@ -90,7 +123,7 @@ export function generateGenome(
     complexity,
     generation,
     ancestry: [],
-    mutationRate: 0.1 + rng() * 0.2,
+    mutationRate: 0.1 + rng() * 0.15 + generation * 0.02,
   };
 }
 
@@ -191,28 +224,39 @@ export function crossGenomes(
   };
 }
 
+const SPECIES_ENV_TINTS: Record<string, { r: number; g: number; b: number }> = {
+  slime: { r: 0, g: 15, b: 0 },
+  demon: { r: 15, g: -5, b: -5 },
+  wraith: { r: 5, g: -5, b: 15 },
+  golem: { r: 8, g: 6, b: 0 },
+  insect: { r: -5, g: 5, b: -5 },
+  fungal: { r: 10, g: 0, b: 10 },
+};
+
 export function generateEnvironmentColors(
   depth: number,
-  seed: number
+  seed: number,
+  dominantSpecies?: string | null
 ): { floor: Color; wall: Color; accent: Color } {
   const rng = seededRandom(seed + depth * 1000);
   const hueShift = depth * 30;
+  const tint = dominantSpecies ? (SPECIES_ENV_TINTS[dominantSpecies.replace("alpha ", "")] || { r: 0, g: 0, b: 0 }) : { r: 0, g: 0, b: 0 };
 
   return {
     floor: {
-      r: Math.max(8, 20 - depth * 2 + Math.floor(rng() * 10)),
-      g: Math.max(8, 18 - depth * 2 + Math.floor(rng() * 10)),
-      b: Math.max(10, 25 - depth + Math.floor(rng() * 10 + hueShift * 0.1)),
+      r: Math.max(8, Math.min(40, 20 - depth * 2 + Math.floor(rng() * 10) + tint.r)),
+      g: Math.max(8, Math.min(40, 18 - depth * 2 + Math.floor(rng() * 10) + tint.g)),
+      b: Math.max(10, Math.min(45, 25 - depth + Math.floor(rng() * 10 + hueShift * 0.1) + tint.b)),
     },
     wall: {
-      r: Math.min(80, 40 + Math.floor(rng() * 20 + hueShift * 0.2)),
-      g: Math.min(70, 35 + Math.floor(rng() * 15)),
-      b: Math.min(90, 50 + Math.floor(rng() * 20 + hueShift * 0.3)),
+      r: Math.min(90, 40 + Math.floor(rng() * 20 + hueShift * 0.2) + tint.r * 2),
+      g: Math.min(80, 35 + Math.floor(rng() * 15) + tint.g * 2),
+      b: Math.min(100, 50 + Math.floor(rng() * 20 + hueShift * 0.3) + tint.b * 2),
     },
     accent: {
-      r: Math.min(255, 100 + Math.floor(rng() * 80 + hueShift)),
-      g: Math.min(255, 80 + Math.floor(rng() * 60)),
-      b: Math.min(255, 120 + Math.floor(rng() * 100)),
+      r: Math.min(255, 100 + Math.floor(rng() * 80 + hueShift) + tint.r * 4),
+      g: Math.min(255, 80 + Math.floor(rng() * 60) + tint.g * 4),
+      b: Math.min(255, 120 + Math.floor(rng() * 100) + tint.b * 4),
     },
   };
 }

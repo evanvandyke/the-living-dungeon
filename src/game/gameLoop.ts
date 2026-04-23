@@ -532,9 +532,11 @@ export class GameLoop {
         );
         if (event) {
           this.state.evolutionLog.push(event);
-          this.addMessage(`[EVOLUTION] ${event.description}`, "#ff88ff");
+          const color = event.type === "extinction" ? "#ff4444" : "#ff88ff";
+          this.addMessage(`[EVOLUTION] ${event.description}`, color);
         }
       }
+      this.envColors = generateEnvironmentColors(this.state.depth, this.level.seed, this.evolution.getMostDangerousSpecies());
     }
   }
 
@@ -561,7 +563,7 @@ export class GameLoop {
       this.state.depth
     );
     this.level = generateDungeon(60, 40, this.state.depth, this.level.seed);
-    this.envColors = generateEnvironmentColors(this.state.depth, this.level.seed);
+    this.envColors = generateEnvironmentColors(this.state.depth, this.level.seed, this.evolution.getMostDangerousSpecies());
 
     const startRoom = this.level.rooms[0];
     this.state.player.pos.x = Math.floor(startRoom.x + startRoom.width / 2);
@@ -584,7 +586,7 @@ export class GameLoop {
 
     this.state.depth--;
     this.level = generateDungeon(60, 40, this.state.depth, this.level.seed);
-    this.envColors = generateEnvironmentColors(this.state.depth, this.level.seed);
+    this.envColors = generateEnvironmentColors(this.state.depth, this.level.seed, this.evolution.getMostDangerousSpecies());
 
     const lastRoom = this.level.rooms[this.level.rooms.length - 1];
     this.state.player.pos.x = Math.floor(lastRoom.x + lastRoom.width / 2);
