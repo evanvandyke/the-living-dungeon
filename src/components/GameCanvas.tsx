@@ -261,6 +261,18 @@ export default function GameCanvas() {
 
     renderer.drawFogOfWar(game.visible, game.state.player.explored, camCol, camRow);
     renderer.updateParticles(0.016);
+
+    renderer.drawMinimap(
+      game.level.tiles,
+      game.state.player.explored,
+      game.visible,
+      game.state.player.pos.x,
+      game.state.player.pos.y,
+      game.state.monsters.map((m) => ({ x: m.pos.x, y: m.pos.y, alive: m.alive })),
+      game.level.width,
+      game.level.height
+    );
+
     renderer.endFrame();
   }, [processVisualEvents]);
 

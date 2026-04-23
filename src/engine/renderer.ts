@@ -430,6 +430,76 @@ export class Renderer {
     this.ctx.fillRect(x, y, w * pct, 3);
   }
 
+  drawMinimap(
+    tiles: number[][],
+    explored: Set<string>,
+    visible: Set<string>,
+    playerX: number,
+    playerY: number,
+    monsters: { x: number; y: number; alive: boolean }[],
+    mapWidth: number,
+    mapHeight: number
+  ) {
+    const pixelSize = 2;
+    const padding = 8;
+    const mmWidth = mapWidth * pixelSize;
+    const mmHeight = mapHeight * pixelSize;
+    const ox = padding;
+    const oy = padding;
+
+    this.ctx.fillStyle = "rgba(0,0,0,0.7)";
+    this.ctx.fillRect(ox - 2, oy - 2, mmWidth + 4, mmHeight + 4);
+    this.ctx.strokeStyle = "rgba(100,80,160,0.5)";
+    this.ctx.lineWidth = 1;
+    this.ctx.strokeRect(ox - 2, oy - 2, mmWidth + 4, mmHeight + 4);
+
+    for (let y = 0; y < mapHeight; y++) {
+      for (let x = 0; x < mapWidth; x++) {
+        const key = `${x},${y}`;
+        if (!explored.has(key)) continue;
+        const tile = tiles[y]?.[x];
+        if (tile === undefined || tile === 0) continue;
+
+        const inView = visible.has(key);
+        if (tile === 2) {
+          this.ctx.fillStyle = inView ? "rgba(80,70,100,0.8)" : "rgba(50,45,65,0.5)";
+        } else if (tile === 6) {
+          this.ctx.fillStyle = "rgba(30,60,150,0.7)";
+        } else if (tile === 7) {
+          this.ctx.fillStyle = `rgba(200,${80 + Math.sin(this.time + x) * 30},20,0.7)`;
+        } else if (tile === 4) {
+          this.ctx.fillStyle = "rgba(255,200,50,0.9)";
+        } else if (tile === 5) {
+          this.ctx.fillStyle = "rgba(100,200,255,0.9)";
+        } else {
+          this.ctx.fillStyle = inView ? "rgba(40,35,55,0.6)" : "rgba(25,22,35,0.4)";
+        }
+        this.ctx.fillRect(ox + x * pixelSize, oy + y * pixelSize, pixelSize, pixelSize);
+      }
+    }
+
+    for (const m of monsters) {
+      if (!m.alive) continue;
+      if (!visible.has(`${m.x},${m.y}`)) continue;
+      this.ctx.fillStyle = "rgba(255,60,60,0.9)";
+      this.ctx.fillRect(
+        ox + m.x * pixelSize,
+        oy + m.y * pixelSize,
+        pixelSize,
+        pixelSize
+      );
+    }
+
+    const pulse = Math.sin(this.time * 4) * 0.3 + 0.7;
+    this.ctx.fillStyle = `rgba(255,255,100,${pulse})`;
+    this.ctx.fillRect(
+      ox + playerX * pixelSize - 1,
+      oy + playerY * pixelSize - 1,
+      pixelSize + 2,
+      pixelSize + 2
+    );
+  }
+
   drawPlayerGlow(col: number, row: number) {
     const cx = col * this.tileSize + this.tileSize / 2;
     const cy = row * this.tileSize + this.tileSize / 2;
