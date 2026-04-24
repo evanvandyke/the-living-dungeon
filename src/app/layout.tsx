@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "The Living Dungeon",
   description: "A self-evolving roguelike with generative art",
+  icons: { icon: "/icon.svg" },
 };
 
 export const viewport: Viewport = {
