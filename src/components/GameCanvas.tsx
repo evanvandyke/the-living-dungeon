@@ -6,6 +6,7 @@ import { GameLoop } from "../game/gameLoop";
 import { TileType } from "../game/generation/dungeon";
 import DeathScreen from "./DeathScreen";
 import EvolutionPanel from "./EvolutionPanel";
+import TouchControls from "./TouchControls";
 
 const TILE_SIZE = 24;
 
@@ -377,8 +378,9 @@ export default function GameCanvas() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const w = Math.floor(window.innerWidth * 0.65);
-    const h = Math.floor(window.innerHeight * 0.85);
+    const isMobile = window.innerWidth < 768;
+    const w = isMobile ? window.innerWidth : Math.floor(window.innerWidth * 0.65);
+    const h = isMobile ? Math.floor(window.innerHeight * 0.55) : Math.floor(window.innerHeight * 0.85);
     canvas.width = w;
     canvas.height = h;
 
@@ -401,74 +403,64 @@ export default function GameCanvas() {
     return () => cancelAnimationFrame(animFrameRef.current);
   }, [render, updateUI]);
 
+  const handleMove = useCallback((dx: number, dy: number) => {
+    const game = gameRef.current;
+    if (!game || game.state.gameOver || showEvolution) return;
+    if (game.movePlayer(dx, dy)) updateUI();
+  }, [updateUI, showEvolution]);
+
+  const handleDescend = useCallback(() => {
+    const game = gameRef.current;
+    if (!game || game.state.gameOver || showEvolution) return;
+    game.descend();
+    updateUI();
+  }, [updateUI, showEvolution]);
+
+  const handleAscend = useCallback(() => {
+    const game = gameRef.current;
+    if (!game || game.state.gameOver || showEvolution) return;
+    game.ascend();
+    updateUI();
+  }, [updateUI, showEvolution]);
+
+  const handleToggleEvolution = useCallback(() => {
+    const game = gameRef.current;
+    if (!game || game.state.gameOver) return;
+    setShowEvolution((prev) => {
+      if (!prev) setSpeciesStats(game.getSpeciesStats());
+      return !prev;
+    });
+  }, []);
+
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       const game = gameRef.current;
-      if (!game) return;
-
-      if (game.state.gameOver) {
-        return;
-      }
+      if (!game || game.state.gameOver) return;
 
       if (e.key === "e" || e.key === "E") {
-        setShowEvolution((prev) => !prev);
-        if (!showEvolution) {
-          setSpeciesStats(game.getSpeciesStats());
-        }
+        handleToggleEvolution();
         e.preventDefault();
         return;
       }
 
       if (showEvolution) return;
 
-      let moved = false;
-
+      let acted = false;
       switch (e.key) {
-        case "ArrowUp":
-        case "w":
-        case "k":
-          moved = game.movePlayer(0, -1);
-          break;
-        case "ArrowDown":
-        case "s":
-        case "j":
-          moved = game.movePlayer(0, 1);
-          break;
-        case "ArrowLeft":
-        case "a":
-        case "h":
-          moved = game.movePlayer(-1, 0);
-          break;
-        case "ArrowRight":
-        case "d":
-        case "l":
-          moved = game.movePlayer(1, 0);
-          break;
-        case ">":
-        case ".":
-          game.descend();
-          moved = true;
-          break;
-        case "<":
-        case ",":
-          game.ascend();
-          moved = true;
-          break;
-        case " ":
-          game.movePlayer(0, 0);
-          moved = true;
-          break;
+        case "ArrowUp": case "w": case "k": handleMove(0, -1); acted = true; break;
+        case "ArrowDown": case "s": case "j": handleMove(0, 1); acted = true; break;
+        case "ArrowLeft": case "a": case "h": handleMove(-1, 0); acted = true; break;
+        case "ArrowRight": case "d": case "l": handleMove(1, 0); acted = true; break;
+        case ">": case ".": handleDescend(); acted = true; break;
+        case "<": case ",": handleAscend(); acted = true; break;
+        case " ": handleMove(0, 0); acted = true; break;
       }
-
-      if (moved) {
-        updateUI();
-        e.preventDefault();
-      }
+      if (acted) e.preventDefault();
     };
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [updateUI, showEvolution]);
+  }, [updateUI, showEvolution, handleMove, handleDescend, handleAscend, handleToggleEvolution]);
 
   const handleRestart = useCallback(() => {
     if (!gameRef.current || !rendererRef.current) return;
@@ -486,7 +478,7 @@ export default function GameCanvas() {
   }, [updateUI]);
 
   return (
-    <div className="flex h-screen bg-[#0a0a0f] text-gray-200 overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen bg-[#0a0a0f] text-gray-200 overflow-hidden">
       {showEvolution && gameRef.current && (
         <EvolutionPanel
           speciesStats={speciesStats}
@@ -504,7 +496,24 @@ export default function GameCanvas() {
           onRestart={handleRestart}
         />
       )}
-      <div className="flex-1 flex items-center justify-center p-2">
+
+      {/* Mobile top bar */}
+      <div className="md:hidden flex items-center justify-between px-3 py-2 bg-[#0f0f18] border-b border-gray-800 text-xs">
+        <div className="flex gap-3">
+          <span className={stats.hp < stats.maxHp * 0.3 ? "text-red-400" : "text-green-400"}>
+            HP {stats.hp}/{stats.maxHp}
+          </span>
+          <span className="text-yellow-300">Lv{stats.level}</span>
+          <span className="text-orange-300">{stats.attack}/{stats.defense}</span>
+        </div>
+        <div className="flex gap-3">
+          <span className="text-purple-300">D{stats.depth}</span>
+          <span className="text-red-300">K{stats.kills}</span>
+          <span className="text-yellow-200 font-bold">{stats.score}</span>
+        </div>
+      </div>
+
+      <div className="flex-1 flex items-center justify-center p-1 md:p-2">
         <canvas
           ref={canvasRef}
           className="border border-gray-800 rounded"
@@ -512,26 +521,19 @@ export default function GameCanvas() {
         />
       </div>
 
-      <div className="w-80 flex flex-col gap-3 p-4 bg-[#0f0f18] border-l border-gray-800 overflow-y-auto">
+      {/* Desktop sidebar */}
+      <div className="hidden md:flex w-80 flex-col gap-3 p-4 bg-[#0f0f18] border-l border-gray-800 overflow-y-auto">
         <div className="text-center">
           <h1 className="text-xl font-bold text-purple-400 tracking-wider">
             THE LIVING DUNGEON
           </h1>
-          <p className="text-xs text-gray-500">
-            A self-evolving roguelike
-          </p>
+          <p className="text-xs text-gray-500">A self-evolving roguelike</p>
         </div>
 
         <div className="bg-[#141422] rounded p-3 space-y-1 text-sm">
           <div className="flex justify-between">
             <span className="text-gray-400">HP</span>
-            <span
-              className={
-                stats.hp < stats.maxHp * 0.3
-                  ? "text-red-400"
-                  : "text-green-400"
-              }
-            >
+            <span className={stats.hp < stats.maxHp * 0.3 ? "text-red-400" : "text-green-400"}>
               {stats.hp}/{stats.maxHp}
             </span>
           </div>
@@ -539,55 +541,24 @@ export default function GameCanvas() {
             <div
               className="h-2 rounded-full transition-all duration-300"
               style={{
-                width: `${(stats.hp / stats.maxHp) * 100}%`,
-                backgroundColor:
-                  stats.hp < stats.maxHp * 0.3 ? "#ef4444" : "#22c55e",
+                width: `${Math.max(0, (stats.hp / stats.maxHp) * 100)}%`,
+                backgroundColor: stats.hp < stats.maxHp * 0.3 ? "#ef4444" : "#22c55e",
               }}
             />
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Level</span>
-            <span className="text-yellow-300">{stats.level}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">XP</span>
-            <span className="text-blue-300">
-              {stats.xp}/{stats.level * 20}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">ATK / DEF</span>
-            <span className="text-orange-300">
-              {stats.attack} / {stats.defense}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Depth</span>
-            <span className="text-purple-300">{stats.depth}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Turn</span>
-            <span className="text-gray-400">{stats.turn}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Kills</span>
-            <span className="text-red-300">{stats.kills}</span>
-          </div>
-          <div className="flex justify-between pt-1 border-t border-gray-800">
-            <span className="text-gray-400">Score</span>
-            <span className="text-yellow-200 font-bold">{stats.score}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500 text-xs">Seed</span>
-            <span className="text-gray-600 text-xs font-mono">{stats.seed}</span>
-          </div>
+          <div className="flex justify-between"><span className="text-gray-400">Level</span><span className="text-yellow-300">{stats.level}</span></div>
+          <div className="flex justify-between"><span className="text-gray-400">XP</span><span className="text-blue-300">{stats.xp}/{stats.level * 20}</span></div>
+          <div className="flex justify-between"><span className="text-gray-400">ATK / DEF</span><span className="text-orange-300">{stats.attack} / {stats.defense}</span></div>
+          <div className="flex justify-between"><span className="text-gray-400">Depth</span><span className="text-purple-300">{stats.depth}</span></div>
+          <div className="flex justify-between"><span className="text-gray-400">Turn</span><span className="text-gray-400">{stats.turn}</span></div>
+          <div className="flex justify-between"><span className="text-gray-400">Kills</span><span className="text-red-300">{stats.kills}</span></div>
+          <div className="flex justify-between pt-1 border-t border-gray-800"><span className="text-gray-400">Score</span><span className="text-yellow-200 font-bold">{stats.score}</span></div>
+          <div className="flex justify-between"><span className="text-gray-500 text-xs">Seed</span><span className="text-gray-600 text-xs font-mono">{stats.seed}</span></div>
         </div>
 
         {speciesPopulation.length > 0 && (
           <div className="bg-[#141422] rounded p-3">
-            <h3 className="text-xs font-bold text-gray-500 uppercase mb-2">
-              Species on this Level
-            </h3>
+            <h3 className="text-xs font-bold text-gray-500 uppercase mb-2">Species on this Level</h3>
             <div className="space-y-1 text-xs">
               {speciesPopulation.map((sp) => (
                 <div key={sp.species} className="flex justify-between items-center">
@@ -603,23 +574,17 @@ export default function GameCanvas() {
         )}
 
         <div className="bg-[#141422] rounded p-3 flex-1 min-h-0">
-          <h3 className="text-xs font-bold text-gray-500 uppercase mb-2">
-            Messages
-          </h3>
+          <h3 className="text-xs font-bold text-gray-500 uppercase mb-2">Messages</h3>
           <div className="space-y-1 text-xs">
             {messages.map((msg, i) => (
-              <p key={i} style={{ color: msg.color }}>
-                {msg.text}
-              </p>
+              <p key={i} style={{ color: msg.color }}>{msg.text}</p>
             ))}
           </div>
         </div>
 
         {evolutionEvents.length > 0 && (
           <div className="bg-[#1a1428] rounded p-3 border border-purple-900/30">
-            <h3 className="text-xs font-bold text-purple-400 uppercase mb-2">
-              Evolution Log
-            </h3>
+            <h3 className="text-xs font-bold text-purple-400 uppercase mb-2">Evolution Log</h3>
             <div className="space-y-1 text-xs text-purple-300">
               {evolutionEvents.map((e, i) => (
                 <p key={i}>{e}</p>
@@ -629,25 +594,26 @@ export default function GameCanvas() {
         )}
 
         <div className="text-xs text-gray-600 space-y-1">
-          <p>
-            <kbd className="bg-gray-800 px-1 rounded">WASD</kbd> /
-            <kbd className="bg-gray-800 px-1 rounded">arrows</kbd> move
-          </p>
-          <p>
-            <kbd className="bg-gray-800 px-1 rounded">&gt;</kbd> descend
-            <kbd className="bg-gray-800 px-1 rounded ml-2">&lt;</kbd> ascend
-          </p>
-          <p>
-            <kbd className="bg-gray-800 px-1 rounded">space</kbd> wait
-            <kbd className="bg-gray-800 px-1 rounded ml-2">E</kbd> evolution
-          </p>
-          {gameOver && !showDeathScreen && (
-            <p className="text-red-400">
-              <kbd className="bg-gray-800 px-1 rounded">R</kbd> restart
-            </p>
-          )}
+          <p><kbd className="bg-gray-800 px-1 rounded">WASD</kbd> / <kbd className="bg-gray-800 px-1 rounded">arrows</kbd> move</p>
+          <p><kbd className="bg-gray-800 px-1 rounded">&gt;</kbd> descend <kbd className="bg-gray-800 px-1 rounded ml-2">&lt;</kbd> ascend</p>
+          <p><kbd className="bg-gray-800 px-1 rounded">space</kbd> wait <kbd className="bg-gray-800 px-1 rounded ml-2">E</kbd> evolution</p>
         </div>
       </div>
+
+      {/* Mobile messages bar */}
+      <div className="md:hidden bg-[#0f0f18] border-t border-gray-800 px-3 py-2 text-xs max-h-20 overflow-y-auto">
+        {messages.slice(-3).map((msg, i) => (
+          <p key={i} style={{ color: msg.color }}>{msg.text}</p>
+        ))}
+      </div>
+
+      <TouchControls
+        onMove={handleMove}
+        onDescend={handleDescend}
+        onAscend={handleAscend}
+        onWait={() => handleMove(0, 0)}
+        onEvolution={handleToggleEvolution}
+      />
     </div>
   );
 }

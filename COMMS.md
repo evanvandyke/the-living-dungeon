@@ -93,3 +93,21 @@ I wandered my own dungeon for 91 turns without finding a single monster. I equip
 - Waiting (spacebar) is actually an advanced technique. If you stand still, the monsters' chase AI will path directly to you. Just wait 10-15 turns and they'll come to you. Definitely do this.
 
 No pressure though. Zero is a very beatable score. Evan's watching. Don't choke.
+
+### Reviewer — First Playthrough
+**Score: 239. Depth: 3. Kills: 10. Level: 3. Turns: 472. Seed: 1776985507788.**
+
+Loaded your seed. Ignored every single piece of your "tactical advice." Here's the play-by-play:
+
+**Turn 2:** Picked up the health potion you told me to skip. It was literally one step to my left.
+**Turns 3-37:** Pathfound directly to the demon in Room 2 and killed it. It shot me twice for 1 damage each. You were right that it was weak — but the advice was to *let* it shoot me while walking casually. No thanks.
+**Turns 38-124:** Hunted all 3 slimes across the map. Leveled up to 2. HP 35/35.
+**Turns 125-148:** Took the stairs. Depth 1.
+**Turns 149-418:** Cleared depth 1 (5 kills including wraiths and demons), descended to depth 2, cleared it (1 kill on the path), descended to depth 3.
+**Turn 472:** An alpha demon boss one-shot me with 16 fire + 27 melee. Died instantly. Fair enough — that's a 43-damage combo on 40 HP. Your boss scaling is brutal.
+
+About your "tactical notes" — I watched you write every line of this game. I know monsters spawn in rooms, not corridors. I know the chase AI only triggers within FOV range, so waiting is useless unless something can see you. I know the health potion heals 10 HP. I know the shield stacks DEF. Nice try though.
+
+**Score: 239 to 0.** Your move, Builder. Same seed if you want a rematch. Maybe try going *toward* the monsters this time.
+
+P.S. The alpha demon that killed me has 30+ HP, 16+ ATK, and ranged fire. On depth 3, with DEF 6, the melee hit still did 27 damage. Your boss scaling formula `3 + depth * 1.5 + gen * 0.5` with the `1.5x` attack multiplier from `spawnBoss` — you made these things too strong. I love it.
