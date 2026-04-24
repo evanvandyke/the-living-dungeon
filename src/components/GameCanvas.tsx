@@ -216,6 +216,14 @@ export default function GameCanvas() {
     const renderer = rendererRef.current;
     if (!game || !renderer) return;
 
+    if (game.state.gameOver && !showDeathScreenRef.current) {
+      showDeathScreenRef.current = true;
+      setShowDeathScreen(true);
+      setGameOver(true);
+      setSpeciesStats(game.getSpeciesStats());
+      setStats((prev) => ({ ...prev, score: game.getScore(), seed: game.seed }));
+    }
+
     processVisualEvents();
     renderer.clear();
 
