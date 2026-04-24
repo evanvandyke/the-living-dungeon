@@ -16,25 +16,30 @@ cp -r /path/to/framework/prompts ./prompts
 
 ## 2. Run Prep Phase
 
-Open two terminals in the project directory:
+Run these sequentially — Researcher first, then Architect. Research informs architecture.
 
-**Terminal 1 — Architect:**
+**Step 1 — Researcher** (run first):
 ```
 claude
 # Then paste or type:
-# Read framework/prompts/architect.md and follow those instructions.
-# Or more directly:
-# You are the Architect. Read PROJECT.md. Produce SPEC.md (architecture) and PLAN.md (phased implementation plan). Write to COMMS.md when done.
+# You are the Researcher. Read PROJECT.md. Investigate all APIs, libraries, and services.
+# Produce RESEARCH.md with working code snippets, gotchas, and auth details.
+# Write to COMMS.md when done.
 ```
 
-**Terminal 2 — Researcher:**
+Wait for Researcher to finish. Then:
+
+**Step 2 — Architect** (run after Researcher completes):
 ```
 claude
 # Then paste or type:
-# You are the Researcher. Read PROJECT.md. Investigate all APIs, libraries, and services. Produce RESEARCH.md with working code snippets, gotchas, and auth details. Write to COMMS.md when done.
+# You are the Architect. Read PROJECT.md and RESEARCH.md.
+# Use the research findings to inform your architecture decisions.
+# Produce SPEC.md (architecture) and PLAN.md (phased implementation plan).
+# Write to COMMS.md when done.
 ```
 
-Wait for both to finish. Review SPEC.md, PLAN.md, and RESEARCH.md. Edit if needed.
+Review SPEC.md, PLAN.md, and RESEARCH.md. Edit if needed.
 
 ## 3. Run Build Phase
 

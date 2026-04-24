@@ -6,13 +6,19 @@ A reusable framework for running multiple Claude sessions in parallel to build s
 
 Two phases, each with dedicated sessions:
 
-### Phase 1: Prep (run first, complete before build starts)
-| Session | Role | Method | Output |
-|---------|------|--------|--------|
-| Architect | Design system architecture, make tech decisions | One-shot or short loop | `SPEC.md` |
-| Researcher | Investigate APIs, libraries, patterns, gotchas | One-shot or short loop | `RESEARCH.md` |
+### Phase 1: Prep (run sequentially, complete before build starts)
 
-Both sessions read `PROJECT.md` (your brief) and write their outputs. These feed into Phase 2.
+**Step 1 — Researcher** (runs first):
+| Session | Role | Method | Reads | Output |
+|---------|------|--------|-------|--------|
+| Researcher | Investigate APIs, libraries, patterns, gotchas | One-shot | `PROJECT.md` | `RESEARCH.md`, `COMMS.md` |
+
+**Step 2 — Architect** (runs after Researcher finishes):
+| Session | Role | Method | Reads | Output |
+|---------|------|--------|-------|--------|
+| Architect | Design system architecture, make tech decisions | One-shot | `PROJECT.md`, `RESEARCH.md`, `COMMS.md` | `SPEC.md`, `PLAN.md`, `COMMS.md` |
+
+Research informs architecture. The Architect reads RESEARCH.md so API constraints, library capabilities, and known gotchas shape the system design rather than getting discovered after decisions are locked in.
 
 ### Phase 2: Build (run concurrently, long-running)
 | Session | Role | Method | Reads | Writes |
