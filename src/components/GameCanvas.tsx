@@ -34,6 +34,7 @@ export default function GameCanvas() {
   const [gameOver, setGameOver] = useState(false);
   const [evolutionEvents, setEvolutionEvents] = useState<string[]>([]);
   const [showDeathScreen, setShowDeathScreen] = useState(false);
+  const showDeathScreenRef = useRef(false);
   const [speciesStats, setSpeciesStats] = useState<Map<string, { totalKills: number; totalDeaths: number; currentGeneration: number }>>(new Map());
   const [speciesPopulation, setSpeciesPopulation] = useState<{ species: string; count: number; gen: number }[]>([]);
   const [showEvolution, setShowEvolution] = useState(false);
@@ -56,7 +57,8 @@ export default function GameCanvas() {
     });
     setMessages(s.messages.slice(-8));
     setGameOver(s.gameOver);
-    if (s.gameOver && !showDeathScreen) {
+    if (s.gameOver && !showDeathScreenRef.current) {
+      showDeathScreenRef.current = true;
       setShowDeathScreen(true);
       setSpeciesStats(gameRef.current.getSpeciesStats());
     }
@@ -81,7 +83,7 @@ export default function GameCanvas() {
     setEvolutionEvents(
       s.evolutionLog.slice(-5).map((e) => `[T${e.turn}] ${e.description}`)
     );
-  }, [showDeathScreen]);
+  }, []);
 
   const processVisualEvents = useCallback(() => {
     const game = gameRef.current;
@@ -469,6 +471,7 @@ export default function GameCanvas() {
       x: startPx - Math.floor(rendererRef.current.cols / 2),
       y: startPy - Math.floor(rendererRef.current.rows / 2),
     };
+    showDeathScreenRef.current = false;
     setShowDeathScreen(false);
     setGameOver(false);
     updateUI();
