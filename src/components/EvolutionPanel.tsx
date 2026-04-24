@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import { Color } from "../engine/renderer";
 
 interface SpeciesData {
-  species: string;
   totalKills: number;
   totalDeaths: number;
   currentGeneration: number;
