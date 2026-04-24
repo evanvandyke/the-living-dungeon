@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { GameState } from "../game/entities/types";
+import { SavedScore } from "../game/scores";
 
 interface DeathScreenProps {
   state: GameState;
@@ -9,17 +10,6 @@ interface DeathScreenProps {
   seed: number;
   speciesStats: Map<string, { totalKills: number; totalDeaths: number; currentGeneration: number }>;
   onRestart: () => void;
-}
-
-interface SavedScore {
-  name: string;
-  score: number;
-  depth: number;
-  kills: number;
-  level: number;
-  turns: number;
-  seed: number;
-  date: string;
 }
 
 export default function DeathScreen({ state, score, seed, speciesStats, onRestart }: DeathScreenProps) {
@@ -96,8 +86,18 @@ export default function DeathScreen({ state, score, seed, speciesStats, onRestar
       kills: state.player.killCount,
       level: state.player.stats.level,
       turns: state.turn,
+      attack: state.player.stats.attack,
+      defense: state.player.stats.defense,
       seed,
       date: new Date().toISOString(),
+      evolutionEvents: state.evolutionLog.length,
+      speciesEncountered: speciesStats.size,
+      speciesStats: Array.from(speciesStats.entries()).map(([species, data]) => ({
+        species,
+        kills: data.totalKills,
+        deaths: data.totalDeaths,
+        generation: data.currentGeneration,
+      })),
     };
 
     try {

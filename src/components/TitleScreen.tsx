@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { generateGenome, genomeToSprite } from "../art/generator";
 import { Color } from "../engine/renderer";
+import { SavedScore } from "../game/scores";
+import ScoreLightbox from "./ScoreLightbox";
 
 const SPECIES = ["slime", "demon", "wraith", "golem", "insect", "fungal"];
 
@@ -21,6 +23,15 @@ export default function TitleScreen({ onStart }: { onStart: () => void }) {
   const [titleOpacity, setTitleOpacity] = useState(0);
   const [subtitleOpacity, setSubtitleOpacity] = useState(0);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [highScores, setHighScores] = useState<SavedScore[]>([]);
+  const [selectedScore, setSelectedScore] = useState<{ score: SavedScore; rank: number } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/scores")
+      .then((r) => r.json())
+      .then((scores: SavedScore[]) => setHighScores(scores.slice(0, 10)))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -167,24 +178,33 @@ export default function TitleScreen({ onStart }: { onStart: () => void }) {
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
+      if (selectedScore) {
+        if (e.key === "Escape") setSelectedScore(null);
+        return;
+      }
       if (e.key === "Enter" || e.key === " ") {
         onStart();
       }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [onStart]);
+  }, [onStart, selectedScore]);
 
   return (
-    <div
-      className="relative w-full h-screen bg-[#0a0a0f] cursor-pointer"
-      onClick={onStart}
-    >
+    <div className="relative w-full h-screen bg-[#0a0a0f] overflow-hidden">
       <canvas ref={canvasRef} className="absolute inset-0" />
+
+      {selectedScore && (
+        <ScoreLightbox
+          score={selectedScore.score}
+          rank={selectedScore.rank}
+          onClose={() => setSelectedScore(null)}
+        />
+      )}
 
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
         <h1
-          className="text-6xl font-bold tracking-[0.3em] text-purple-400 mb-4"
+          className="text-4xl md:text-6xl font-bold tracking-[0.2em] md:tracking-[0.3em] text-purple-400 mb-4"
           style={{
             opacity: titleOpacity,
             textShadow:
@@ -196,16 +216,46 @@ export default function TitleScreen({ onStart }: { onStart: () => void }) {
         </h1>
 
         <p
-          className="text-lg text-purple-300/60 tracking-[0.5em] uppercase mb-16"
+          className="text-sm md:text-lg text-purple-300/60 tracking-[0.3em] md:tracking-[0.5em] uppercase mb-8"
           style={{ opacity: subtitleOpacity }}
         >
           A Self-Evolving Roguelike
         </p>
 
         {showPrompt && (
-          <p className="text-sm text-gray-400 animate-pulse tracking-widest">
-            Press ENTER or click to begin
-          </p>
+          <button
+            onClick={onStart}
+            className="text-sm text-gray-400 animate-pulse tracking-widest mb-8 pointer-events-auto cursor-pointer"
+          >
+            Press ENTER or tap to begin
+          </button>
+        )}
+
+        {showPrompt && highScores.length > 0 && (
+          <div className="pointer-events-auto bg-black/50 rounded-lg border border-purple-900/30 p-4 max-w-sm w-full mx-4 animate-fadeIn">
+            <h3 className="text-xs font-bold text-yellow-400 uppercase tracking-wider mb-3 text-center">
+              High Scores
+            </h3>
+            <div className="space-y-1 text-xs font-mono">
+              {highScores.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedScore({ score: s, rank: i + 1 });
+                  }}
+                  className="flex justify-between w-full px-2 py-1 rounded hover:bg-purple-900/20 transition-colors cursor-pointer text-left"
+                >
+                  <span className="text-gray-500 w-6">{i + 1}.</span>
+                  <span className="text-gray-300 flex-1">{s.name}</span>
+                  <span className="text-yellow-300 w-14 text-right">{s.score}</span>
+                  <span className="text-gray-500 w-20 text-right">
+                    {new Date(s.date).toLocaleDateString()}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
         )}
       </div>
     </div>

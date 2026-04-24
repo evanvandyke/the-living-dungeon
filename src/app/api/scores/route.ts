@@ -2,24 +2,14 @@ import { NextResponse } from "next/server";
 import { put, list } from "@vercel/blob";
 import fs from "fs";
 import path from "path";
+import { SavedScore } from "@/game/scores";
 
 const BLOB_NAME = "scores.json";
 const LOCAL_FILE = path.join(process.cwd(), "scores.json");
 
-interface ScoreEntry {
-  name: string;
-  score: number;
-  depth: number;
-  kills: number;
-  level: number;
-  turns: number;
-  seed: number;
-  date: string;
-}
-
 const isVercel = !!process.env.BLOB_READ_WRITE_TOKEN;
 
-async function readScores(): Promise<ScoreEntry[]> {
+async function readScores(): Promise<SavedScore[]> {
   if (isVercel) {
     try {
       const blobs = await list({ prefix: BLOB_NAME });
@@ -39,7 +29,7 @@ async function readScores(): Promise<ScoreEntry[]> {
   }
 }
 
-async function writeScores(scores: ScoreEntry[]) {
+async function writeScores(scores: SavedScore[]) {
   const json = JSON.stringify(scores, null, 2);
   if (isVercel) {
     await put(BLOB_NAME, json, {
@@ -58,7 +48,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const entry: ScoreEntry = await request.json();
+  const entry: SavedScore = await request.json();
   const scores = await readScores();
   scores.push(entry);
   scores.sort((a, b) => b.score - a.score);
